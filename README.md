@@ -2,6 +2,9 @@
 
 ## getting satared
 
+```
+npm install -g truffle
+```
 private-chain
 
 ```
@@ -30,3 +33,10 @@ geth をmain-netで起動（etc)
 ```
 $ geth --datadir ./main --rpc --rpcaddr "0.0.0.0" --rpcapi eth,net,web3,personal,admin,miner --rpccorsdomain "*" --oppose-dao-fork
 ```
+
+
+## test
+```
+truffle test
+
+
