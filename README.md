@@ -51,9 +51,11 @@ $ truffle serve
 $ truffle test
 ```
 
-## donate
+### donate
+```
 bitcoin : 1257U991WqSvhpS65NjMEoWH5UBwQH5N3V 
 
 eth :0xbf2b26c21c6a1b248d9c857be756fa3bf261aff1
 
 etc :0xbf91930d9a12c365385f310792951d792115d095
+```
