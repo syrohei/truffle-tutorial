@@ -34,9 +34,24 @@ geth をmain-netで起動（etc)
 $ geth --datadir ./main --rpc --rpcaddr "0.0.0.0" --rpcapi eth,net,web3,personal,admin,miner --rpccorsdomain "*" --oppose-dao-fork
 ```
 
+```
+$ truffle migrate
+```
+```
+$ truffle build
+```
+
+## develop
+```
+$ truffle serve
+```
 
 ## test
 ```
 truffle test
+```
 
-
+## donate
+bitcoin : 1257U991WqSvhpS65NjMEoWH5UBwQH5N3V 
+eth :0xbf2b26c21c6a1b248d9c857be756fa3bf261aff1
+etc :0xbf91930d9a12c365385f310792951d792115d095
