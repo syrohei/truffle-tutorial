@@ -17,6 +17,11 @@ geth --datadir ./private account new
 geth --datadir ./private --networkid 123456 --nodiscover --maxpeers 0 --rpc --rpcapi eth,net,web3,personal,admin,miner --minerthreads 1 --rpccorsdomain "*" --mine
 ```
 
+```
+>personal.newAccount()
+>eth.sendTransaction({from: eth.coinbase, to: personal.listAccounts[1] , value: web3.toWei(1, "ether")})
+```
+
 public-chain
 
 ```
