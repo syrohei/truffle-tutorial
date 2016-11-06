@@ -19,6 +19,7 @@ geth --datadir ./private --networkid 123456 --nodiscover --maxpeers 0 --rpc --rp
 
 ```
 >personal.newAccount()
+>personal.unlockAccount(eth.coinbase, passowrd, 1000000)  #password = your password
 >eth.sendTransaction({from: eth.coinbase, to: personal.listAccounts[1] , value: web3.toWei(1, "ether")})
 ```
 
