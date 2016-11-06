@@ -1,6 +1,6 @@
 # truffle-tutorial
 
-## getting satared
+## getting started
 
 ```
 npm install -g truffle
