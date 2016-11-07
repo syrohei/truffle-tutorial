@@ -3,21 +3,22 @@
 ## getting started
 
 ```
-npm install -g truffle
+$ npm install -g truffle
 ```
 private-chain
 
 ```
-geth --datadir ./private init ./genesis.json
+$ geth --datadir ./private init ./genesis.json
 ```
 ```
-geth --datadir ./private account new
+$ geth --datadir ./private account new
 ```
 ```
-geth --datadir ./private --networkid 123456 --nodiscover --maxpeers 0 --rpc --rpcapi eth,net,web3,personal,admin,miner --minerthreads 1 --rpccorsdomain "*" --mine
+$ geth --datadir ./private --networkid 123456 --nodiscover --maxpeers 0 --rpc --rpcapi eth,net,web3,personal,admin,miner --minerthreads 1 --rpccorsdomain "*" --mine
 ```
 
 ```
+$ geth attach http://localhost:8545
 >personal.newAccount()
 >personal.unlockAccount(eth.coinbase, passowrd, 1000000)  #password = your password
 >eth.sendTransaction({from: eth.coinbase, to: personal.listAccounts[1] , value: web3.toWei(1, "ether")})
@@ -39,6 +40,7 @@ geth をmain-netで起動（etc)
 ```
 $ geth --datadir ./main --rpc --rpcaddr "0.0.0.0" --rpcapi eth,net,web3,personal,admin,miner --rpccorsdomain "*" --oppose-dao-fork
 ```
+
 
 ```
 $ truffle migrate
