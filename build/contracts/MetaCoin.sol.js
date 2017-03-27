@@ -1,4 +1,5 @@
 var Web3 = require("web3");
+var SolidityEvent = require("web3/lib/web3/event.js");
 
 (function() {
   // Planned for future features, logging, etc.
@@ -76,7 +77,7 @@ var Web3 = require("web3");
         });
       };
     },
-    synchronizeFunction: function(fn, C) {
+    synchronizeFunction: function(fn, instance, C) {
       var self = this;
       return function() {
         var args = Array.prototype.slice.call(arguments);
@@ -92,6 +93,21 @@ var Web3 = require("web3");
 
         return new Promise(function(accept, reject) {
 
+          var decodeLogs = function(logs) {
+            return logs.map(function(log) {
+              var logABI = C.events[log.topics[0]];
+
+              if (logABI == null) {
+                return null;
+              }
+
+              var decoder = new SolidityEvent(null, logABI, instance.address);
+              return decoder.decode(log);
+            }).filter(function(log) {
+              return log != null;
+            });
+          };
+
           var callback = function(error, tx) {
             if (error != null) {
               reject(error);
@@ -106,7 +122,16 @@ var Web3 = require("web3");
                 if (err) return reject(err);
 
                 if (receipt != null) {
-                  return accept(tx, receipt);
+                  // If they've opted into next gen, return more information.
+                  if (C.next_gen == true) {
+                    return accept({
+                      tx: tx,
+                      receipt: receipt,
+                      logs: decodeLogs(receipt.logs)
+                    });
+                  } else {
+                    return accept(tx);
+                  }
                 }
 
                 if (timeout > 0 && new Date().getTime() - start > timeout) {
@@ -138,7 +163,7 @@ var Web3 = require("web3");
         if (item.constant == true) {
           instance[item.name] = Utils.promisifyFunction(contract[item.name], constructor);
         } else {
-          instance[item.name] = Utils.synchronizeFunction(contract[item.name], constructor);
+          instance[item.name] = Utils.synchronizeFunction(contract[item.name], instance, constructor);
         }
 
         instance[item.name].call = Utils.promisifyFunction(contract[item.name].call, constructor);
@@ -339,6 +364,7 @@ var Web3 = require("web3");
             "type": "uint256"
           }
         ],
+        "payable": false,
         "type": "function"
       },
       {
@@ -360,6 +386,7 @@ var Web3 = require("web3");
             "type": "bool"
           }
         ],
+        "payable": false,
         "type": "function"
       },
       {
@@ -377,10 +404,12 @@ var Web3 = require("web3");
             "type": "uint256"
           }
         ],
+        "payable": false,
         "type": "function"
       },
       {
         "inputs": [],
+        "payable": false,
         "type": "constructor"
       },
       {
@@ -406,12 +435,36 @@ var Web3 = require("web3");
         "type": "event"
       }
     ],
-    "unlinked_binary": "0x6060604052600160a060020a0332166000908152602081905260409020612710905561018f8061002f6000396000f3606060405260e060020a60003504637bd703e8811461003157806390b98a111461005c578063f8b2cb4f1461008e575b005b6100b4600435600073__ConvertLib____________________________6396e4ee3d6100da84610095565b6100c660043560243533600160a060020a03166000908152602081905260408120548290101561011f57506000610189565b6100b46004355b600160a060020a0381166000908152602081905260409020545b919050565b60408051918252519081900360200190f35b604080519115158252519081900360200190f35b60026040518360e060020a02815260040180838152602001828152602001925050506020604051808303818660325a03f4156100025750506040515191506100af9050565b33600160a060020a0390811660008181526020818152604080832080548890039055938716808352918490208054870190558351868152935191937fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef929081900390910190a35060015b9291505056",
-    "updated_at": 1471676949447,
+    "unlinked_binary": "0x606060405234610000575b600160a060020a033216600090815260208190526040902061271090555b5b610223806100386000396000f300606060405263ffffffff60e060020a6000350416637bd703e8811461003a57806390b98a1114610065578063f8b2cb4f14610095575b610000565b3461000057610053600160a060020a03600435166100c0565b60408051918252519081900360200190f35b3461000057610081600160a060020a0360043516602435610140565b604080519115158252519081900360200190f35b3461000057610053600160a060020a03600435166101d8565b60408051918252519081900360200190f35b600073__ConvertLib____________________________6396e4ee3d6100e5846101d8565b60026000604051602001526040518363ffffffff1660e060020a028152600401808381526020018281526020019250505060206040518083038186803b156100005760325a03f415610000575050604051519150505b919050565b600160a060020a03331660009081526020819052604081205482901015610169575060006101d2565b600160a060020a0333811660008181526020818152604080832080548890039055938716808352918490208054870190558351868152935191937fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef929081900390910190a35060015b92915050565b600160a060020a0381166000908152602081905260409020545b9190505600a165627a7a72305820d1ca49eedc275504f4f44dd76400161f9ae276fbc0fa6e44e0bd51688f484aa00029",
+    "updated_at": 1484786708150,
     "links": {
       "ConvertLib": "0xeb4cf9aed40387c19952b369579541314ce8dcd3"
     },
-    "address": "0x1f156e6134a9eb6ffb8804363e9326f6d429a278"
+    "address": "0x1f156e6134a9eb6ffb8804363e9326f6d429a278",
+    "events": {
+      "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef": {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": true,
+            "name": "_from",
+            "type": "address"
+          },
+          {
+            "indexed": true,
+            "name": "_to",
+            "type": "address"
+          },
+          {
+            "indexed": false,
+            "name": "_value",
+            "type": "uint256"
+          }
+        ],
+        "name": "Transfer",
+        "type": "event"
+      }
+    }
   }
 };
 
@@ -457,6 +510,7 @@ var Web3 = require("web3");
     this.address         = this.prototype.address         = network.address;
     this.updated_at      = this.prototype.updated_at      = network.updated_at;
     this.links           = this.prototype.links           = network.links || {};
+    this.events          = this.prototype.events          = network.events || {};
 
     this.network_id = network_id;
   };
@@ -466,10 +520,28 @@ var Web3 = require("web3");
   };
 
   Contract.link = function(name, address) {
+    if (typeof name == "function") {
+      var contract = name;
+
+      if (contract.address == null) {
+        throw new Error("Cannot link contract without an address.");
+      }
+
+      Contract.link(contract.contract_name, contract.address);
+
+      // Merge events so this contract knows about library's events
+      Object.keys(contract.events).forEach(function(topic) {
+        Contract.events[topic] = contract.events[topic];
+      });
+
+      return;
+    }
+
     if (typeof name == "object") {
-      Object.keys(name).forEach(function(n) {
-        var a = name[n];
-        Contract.link(n, a);
+      var obj = name;
+      Object.keys(obj).forEach(function(name) {
+        var a = obj[name];
+        Contract.link(name, a);
       });
       return;
     }
@@ -478,7 +550,10 @@ var Web3 = require("web3");
   };
 
   Contract.contract_name   = Contract.prototype.contract_name   = "MetaCoin";
-  Contract.generated_with  = Contract.prototype.generated_with  = "3.1.2";
+  Contract.generated_with  = Contract.prototype.generated_with  = "3.2.0";
+
+  // Allow people to opt-in to breaking changes now.
+  Contract.next_gen = false;
 
   var properties = {
     binary: function() {

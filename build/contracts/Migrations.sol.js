@@ -1,4 +1,5 @@
 var Web3 = require("web3");
+var SolidityEvent = require("web3/lib/web3/event.js");
 
 (function() {
   // Planned for future features, logging, etc.
@@ -76,7 +77,7 @@ var Web3 = require("web3");
         });
       };
     },
-    synchronizeFunction: function(fn, C) {
+    synchronizeFunction: function(fn, instance, C) {
       var self = this;
       return function() {
         var args = Array.prototype.slice.call(arguments);
@@ -92,6 +93,21 @@ var Web3 = require("web3");
 
         return new Promise(function(accept, reject) {
 
+          var decodeLogs = function(logs) {
+            return logs.map(function(log) {
+              var logABI = C.events[log.topics[0]];
+
+              if (logABI == null) {
+                return null;
+              }
+
+              var decoder = new SolidityEvent(null, logABI, instance.address);
+              return decoder.decode(log);
+            }).filter(function(log) {
+              return log != null;
+            });
+          };
+
           var callback = function(error, tx) {
             if (error != null) {
               reject(error);
@@ -106,7 +122,16 @@ var Web3 = require("web3");
                 if (err) return reject(err);
 
                 if (receipt != null) {
-                  return accept(tx, receipt);
+                  // If they've opted into next gen, return more information.
+                  if (C.next_gen == true) {
+                    return accept({
+                      tx: tx,
+                      receipt: receipt,
+                      logs: decodeLogs(receipt.logs)
+                    });
+                  } else {
+                    return accept(tx);
+                  }
                 }
 
                 if (timeout > 0 && new Date().getTime() - start > timeout) {
@@ -138,7 +163,7 @@ var Web3 = require("web3");
         if (item.constant == true) {
           instance[item.name] = Utils.promisifyFunction(contract[item.name], constructor);
         } else {
-          instance[item.name] = Utils.synchronizeFunction(contract[item.name], constructor);
+          instance[item.name] = Utils.synchronizeFunction(contract[item.name], instance, constructor);
         }
 
         instance[item.name].call = Utils.promisifyFunction(contract[item.name].call, constructor);
@@ -334,6 +359,7 @@ var Web3 = require("web3");
         ],
         "name": "upgrade",
         "outputs": [],
+        "payable": false,
         "type": "function"
       },
       {
@@ -346,6 +372,7 @@ var Web3 = require("web3");
             "type": "uint256"
           }
         ],
+        "payable": false,
         "type": "function"
       },
       {
@@ -358,6 +385,7 @@ var Web3 = require("web3");
             "type": "address"
           }
         ],
+        "payable": false,
         "type": "function"
       },
       {
@@ -370,6 +398,7 @@ var Web3 = require("web3");
             "type": "address"
           }
         ],
+        "payable": false,
         "type": "function"
       },
       {
@@ -382,17 +411,20 @@ var Web3 = require("web3");
         ],
         "name": "setCompleted",
         "outputs": [],
+        "payable": false,
         "type": "function"
       },
       {
         "inputs": [],
+        "payable": false,
         "type": "constructor"
       }
     ],
-    "unlinked_binary": "0x606060405260008054600160a060020a0319163317905561014d806100246000396000f3606060405260e060020a60003504630900f0108114610047578063445df0ac146100cb57806386b714e2146100d45780638da5cb5b146100e6578063fdacd576146100f8575b005b61004560043560008054600160a060020a039081163390911614156100c757604080516002547ffdacd576000000000000000000000000000000000000000000000000000000008252600482015290518392600160a060020a0384169263fdacd5769260248281019392829003018183876161da5a03f115610002575050505b5050565b61011e60025481565b610130600154600160a060020a031681565b610130600054600160a060020a031681565b61004560043560005433600160a060020a039081169116141561011b5760028190555b50565b60408051918252519081900360200190f35b60408051600160a060020a03929092168252519081900360200190f3",
-    "updated_at": 1471676949452,
+    "unlinked_binary": "0x606060405234610000575b60008054600160a060020a03191633600160a060020a03161790555b5b6101d3806100366000396000f300606060405263ffffffff60e060020a6000350416630900f0108114610050578063445df0ac1461006b57806386b714e21461008a5780638da5cb5b146100b3578063fdacd576146100dc575b610000565b3461000057610069600160a060020a03600435166100ee565b005b3461000057610078610161565b60408051918252519081900360200190f35b3461000057610097610167565b60408051600160a060020a039092168252519081900360200190f35b3461000057610097610176565b60408051600160a060020a039092168252519081900360200190f35b3461000057610069600435610185565b005b6000805433600160a060020a039081169116141561015b5781905080600160a060020a031663fdacd5766002546040518263ffffffff1660e060020a02815260040180828152602001915050600060405180830381600087803b156100005760325a03f115610000575050505b5b5b5050565b60025481565b600154600160a060020a031681565b600054600160a060020a031681565b60005433600160a060020a03908116911614156101a25760028190555b5b5b505600a165627a7a72305820faf7fd83ffdbe1c23bf9c70721f00b1a839f8ecfc9b311d91bc7595294fce84c0029",
+    "updated_at": 1484786708156,
     "address": "0x5895c7dca8a4297ee691fe41c60e95cea09b5d01",
-    "links": {}
+    "links": {},
+    "events": {}
   }
 };
 
@@ -438,6 +470,7 @@ var Web3 = require("web3");
     this.address         = this.prototype.address         = network.address;
     this.updated_at      = this.prototype.updated_at      = network.updated_at;
     this.links           = this.prototype.links           = network.links || {};
+    this.events          = this.prototype.events          = network.events || {};
 
     this.network_id = network_id;
   };
@@ -447,10 +480,28 @@ var Web3 = require("web3");
   };
 
   Contract.link = function(name, address) {
+    if (typeof name == "function") {
+      var contract = name;
+
+      if (contract.address == null) {
+        throw new Error("Cannot link contract without an address.");
+      }
+
+      Contract.link(contract.contract_name, contract.address);
+
+      // Merge events so this contract knows about library's events
+      Object.keys(contract.events).forEach(function(topic) {
+        Contract.events[topic] = contract.events[topic];
+      });
+
+      return;
+    }
+
     if (typeof name == "object") {
-      Object.keys(name).forEach(function(n) {
-        var a = name[n];
-        Contract.link(n, a);
+      var obj = name;
+      Object.keys(obj).forEach(function(name) {
+        var a = obj[name];
+        Contract.link(name, a);
       });
       return;
     }
@@ -459,7 +510,10 @@ var Web3 = require("web3");
   };
 
   Contract.contract_name   = Contract.prototype.contract_name   = "Migrations";
-  Contract.generated_with  = Contract.prototype.generated_with  = "3.1.2";
+  Contract.generated_with  = Contract.prototype.generated_with  = "3.2.0";
+
+  // Allow people to opt-in to breaking changes now.
+  Contract.next_gen = false;
 
   var properties = {
     binary: function() {

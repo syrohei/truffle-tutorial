@@ -17,6 +17,11 @@ $ geth --datadir ./private account new
 $ geth --datadir ./private --networkid 123456 --nodiscover --maxpeers 0 --rpc --rpcapi eth,net,web3,personal,admin,miner --minerthreads 1 --rpccorsdomain "*" --mine
 ```
 
+parity
+```
+$ docker run -it -p 8545:8545 --name parity ethcore/parity --jsonrpc-interface '0.0.0.0' --jsonrpc-hosts="all"  --jsonrpc-apis "web3,eth,net,parity,parity_accounts,personal,traces,rpc"
+```
+
 ```
 $ geth attach http://localhost:8545
 >personal.newAccount()

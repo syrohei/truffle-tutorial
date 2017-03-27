@@ -1,4 +1,5 @@
 var Web3 = require("web3");
+var SolidityEvent = require("web3/lib/web3/event.js");
 
 (function() {
   // Planned for future features, logging, etc.
@@ -76,7 +77,7 @@ var Web3 = require("web3");
         });
       };
     },
-    synchronizeFunction: function(fn, C) {
+    synchronizeFunction: function(fn, instance, C) {
       var self = this;
       return function() {
         var args = Array.prototype.slice.call(arguments);
@@ -92,6 +93,21 @@ var Web3 = require("web3");
 
         return new Promise(function(accept, reject) {
 
+          var decodeLogs = function(logs) {
+            return logs.map(function(log) {
+              var logABI = C.events[log.topics[0]];
+
+              if (logABI == null) {
+                return null;
+              }
+
+              var decoder = new SolidityEvent(null, logABI, instance.address);
+              return decoder.decode(log);
+            }).filter(function(log) {
+              return log != null;
+            });
+          };
+
           var callback = function(error, tx) {
             if (error != null) {
               reject(error);
@@ -106,7 +122,16 @@ var Web3 = require("web3");
                 if (err) return reject(err);
 
                 if (receipt != null) {
-                  return accept(tx, receipt);
+                  // If they've opted into next gen, return more information.
+                  if (C.next_gen == true) {
+                    return accept({
+                      tx: tx,
+                      receipt: receipt,
+                      logs: decodeLogs(receipt.logs)
+                    });
+                  } else {
+                    return accept(tx);
+                  }
                 }
 
                 if (timeout > 0 && new Date().getTime() - start > timeout) {
@@ -138,7 +163,7 @@ var Web3 = require("web3");
         if (item.constant == true) {
           instance[item.name] = Utils.promisifyFunction(contract[item.name], constructor);
         } else {
-          instance[item.name] = Utils.synchronizeFunction(contract[item.name], constructor);
+          instance[item.name] = Utils.synchronizeFunction(contract[item.name], instance, constructor);
         }
 
         instance[item.name].call = Utils.promisifyFunction(contract[item.name].call, constructor);
@@ -343,13 +368,15 @@ var Web3 = require("web3");
             "type": "uint256"
           }
         ],
+        "payable": false,
         "type": "function"
       }
     ],
-    "unlinked_binary": "0x606060405260358060106000396000f36503063fc68da550606060405260e060020a600035046396e4ee3d81146024575b6007565b602435600435026060908152602090f3",
-    "updated_at": 1471676949442,
+    "unlinked_binary": "0x6060604052346000575b6076806100176000396000f300606060405263ffffffff60e060020a60003504166396e4ee3d81146022575b6000565b602e6004356024356040565b60408051918252519081900360200190f35b8181025b929150505600a165627a7a723058204e85ed0a759f3ea7cd9b2b4a706e073b5a7e44ec92953c6f433216002d40aed40029",
+    "updated_at": 1484786708126,
     "links": {},
-    "address": "0xeb4cf9aed40387c19952b369579541314ce8dcd3"
+    "address": "0xeb4cf9aed40387c19952b369579541314ce8dcd3",
+    "events": {}
   }
 };
 
@@ -395,6 +422,7 @@ var Web3 = require("web3");
     this.address         = this.prototype.address         = network.address;
     this.updated_at      = this.prototype.updated_at      = network.updated_at;
     this.links           = this.prototype.links           = network.links || {};
+    this.events          = this.prototype.events          = network.events || {};
 
     this.network_id = network_id;
   };
@@ -404,10 +432,28 @@ var Web3 = require("web3");
   };
 
   Contract.link = function(name, address) {
+    if (typeof name == "function") {
+      var contract = name;
+
+      if (contract.address == null) {
+        throw new Error("Cannot link contract without an address.");
+      }
+
+      Contract.link(contract.contract_name, contract.address);
+
+      // Merge events so this contract knows about library's events
+      Object.keys(contract.events).forEach(function(topic) {
+        Contract.events[topic] = contract.events[topic];
+      });
+
+      return;
+    }
+
     if (typeof name == "object") {
-      Object.keys(name).forEach(function(n) {
-        var a = name[n];
-        Contract.link(n, a);
+      var obj = name;
+      Object.keys(obj).forEach(function(name) {
+        var a = obj[name];
+        Contract.link(name, a);
       });
       return;
     }
@@ -416,7 +462,10 @@ var Web3 = require("web3");
   };
 
   Contract.contract_name   = Contract.prototype.contract_name   = "ConvertLib";
-  Contract.generated_with  = Contract.prototype.generated_with  = "3.1.2";
+  Contract.generated_with  = Contract.prototype.generated_with  = "3.2.0";
+
+  // Allow people to opt-in to breaking changes now.
+  Contract.next_gen = false;
 
   var properties = {
     binary: function() {
